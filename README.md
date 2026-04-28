@@ -72,7 +72,7 @@ Complete. Deployed and used live at Em & Anu 2026 wedding event.
 
 ## Text Chunking strategies considered
 
-1. . 🔤 Character Text Splitting
+1. . 🔤** Character Text Splitting**
 What it is: Split text every N characters, with optional overlap.
 
 Pros:
@@ -86,7 +86,7 @@ Overlap helps slightly but doesn't fix the fundamental problem
 
 Verdict: Baseline only. It produces uniform chunk sizes, simplifying indexing, but context loss is significant — critical information may span multiple chunks, reducing retrieval effectiveness.
 
-2. 🔢 Token Text Splitting
+2. 🔢 **Token Text Splitting**
 What it is: Same concept as character splitting, but split on tokens (the actual units LLMs operate on) rather than raw characters.
 
 Pros:
@@ -99,7 +99,7 @@ OpenAI's default settings (800 tokens with 400 overlap) resulted in below-averag
 
 Verdict: Slightly better than character splitting in practice, but still a blunt instrument.
 
-3. 🔁 Recursive Character / Token Splitting
+3. 🔁 **Recursive Character / Token Splitting**
 What it is: Tries a hierarchy of separators (paragraphs → newlines → sentences → characters) and only falls back to a cruder split if the text still exceeds the target size.
 Pros:
 
@@ -114,7 +114,7 @@ Still rule-based — no understanding of meaning
 
 Verdict: The best default for most use cases. Recursive character splitting at 400–512 tokens with 10–20% overlap is the recommended starting point for most RAG systems.
 
-4. 📐 Kamradt & Modified Semantic Chunking
+4. 📐 **Kamradt & Modified Semantic Chunking**
 What it is: Greg Kamradt's method embeds every sentence, then finds "breakpoints" where cosine similarity between adjacent sentences drops sharply — indicating a topic shift — and splits there.
 Pros:
 
@@ -129,7 +129,7 @@ The modified version (KamradtModified) is better: recall rises to 0.871 with a s
 
 Verdict: Good concept, but fragile to hyperparameter defaults. The modified version is meaningfully better, but still not the top performer.
 
-5. 🔵 Cluster Semantic Chunking
+5. 🔵 **Cluster Semantic Chunking**
 What it is: Embed sentences, then use clustering algorithms (e.g., k-means) to group semantically similar sentences together into chunks — rather than relying on adjacent similarity like Kamradt.
 Pros:
 
@@ -144,7 +144,7 @@ Requires tuning the max chunk size parameter carefully
 
 Verdict: The best balance of recall and precision among all methods. The 200-token variant is the precision champion; the 400-token variant maximizes recall.
 
-6. 🤖 LLM Semantic Chunking
+6. 🤖 **LLM Semantic Chunking**
 What it is: Feed the document to an LLM and ask it to identify natural semantic boundaries directly — using its language understanding rather than embedding similarity.
 Pros:
 
@@ -158,4 +158,4 @@ High latency; not practical for large document corpora on a tight budget
 
 Verdict: Highest raw recall, but the cost/complexity is hard to justify unless your documents are complex and your budget allows it.
 
-Decision: I just went with token chunking for simplicity. 
+**Decision:** I just went with token chunking for simplicity. 
