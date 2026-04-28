@@ -69,3 +69,93 @@ Complete. Deployed and used live at Em & Anu 2026 wedding event.
 - RAG architecture (retrieval-augmented generation)
 - Vector store / embedding pipeline
 - LLM (response generation with retrieval grounding)
+
+## Text Chunking strategies considered
+
+1. . 🔤 Character Text Splitting
+What it is: Split text every N characters, with optional overlap.
+
+Pros:
+Extremely simple to implement
+No dependencies, fast
+
+Cons:
+Completely ignores meaning, sentences, or paragraphs
+Frequently cuts mid-word or mid-sentence
+Overlap helps slightly but doesn't fix the fundamental problem
+
+Verdict: Baseline only. It produces uniform chunk sizes, simplifying indexing, but context loss is significant — critical information may span multiple chunks, reducing retrieval effectiveness.
+
+2. 🔢 Token Text Splitting
+What it is: Same concept as character splitting, but split on tokens (the actual units LLMs operate on) rather than raw characters.
+
+Pros:
+More aligned with how embedding models and LLMs actually process text
+Predictable token counts prevent embedding model overflow
+
+Cons:
+Still ignores semantic boundaries — cuts happen based on count, not meaning
+OpenAI's default settings (800 tokens with 400 overlap) resulted in below-average recall and the lowest scores across other metrics Medium
+
+Verdict: Slightly better than character splitting in practice, but still a blunt instrument.
+
+3. 🔁 Recursive Character / Token Splitting
+What it is: Tries a hierarchy of separators (paragraphs → newlines → sentences → characters) and only falls back to a cruder split if the text still exceeds the target size.
+Pros:
+
+Respects natural text structure much better than flat splitting
+Simple to implement via LangChain's RecursiveCharacterTextSplitter
+Surprisingly competitive with more sophisticated methods
+
+Cons:
+
+Recursive splitters apply a hierarchy of separators to enforce length constraints, but they can group unrelated topics together, reducing cohesion arxiv
+Still rule-based — no understanding of meaning
+
+Verdict: The best default for most use cases. Recursive character splitting at 400–512 tokens with 10–20% overlap is the recommended starting point for most RAG systems.
+
+4. 📐 Kamradt & Modified Semantic Chunking
+What it is: Greg Kamradt's method embeds every sentence, then finds "breakpoints" where cosine similarity between adjacent sentences drops sharply — indicating a topic shift — and splits there.
+Pros:
+
+Actually content-aware; splits at genuine topic boundaries
+More semantically coherent chunks than fixed-size methods
+
+Cons:
+
+Requires embedding every single sentence (expensive at scale)
+Default settings underperform: the KamradtSemanticChunker with default settings scores slightly below average across all metrics, with a recall of 0.836 Trychroma
+The modified version (KamradtModified) is better: recall rises to 0.871 with a similar boost in remaining metrics when the modifications of the KamradtModifiedChunker are applied, despite mean chunk length dropping Trychroma
+
+Verdict: Good concept, but fragile to hyperparameter defaults. The modified version is meaningfully better, but still not the top performer.
+
+5. 🔵 Cluster Semantic Chunking
+What it is: Embed sentences, then use clustering algorithms (e.g., k-means) to group semantically similar sentences together into chunks — rather than relying on adjacent similarity like Kamradt.
+Pros:
+
+Can group topically related content even if it's not adjacent in the text
+With the right max chunk size, achieves excellent recall and precision
+ClusterSemanticChunker with a max chunk size of 400 tokens achieves the second-highest recall of 0.913; dropping to 200 tokens results in average recall but the highest precision and IoU across all methods Trychroma
+
+Cons:
+
+Computationally heavier than recursive methods
+Requires tuning the max chunk size parameter carefully
+
+Verdict: The best balance of recall and precision among all methods. The 200-token variant is the precision champion; the 400-token variant maximizes recall.
+
+6. 🤖 LLM Semantic Chunking
+What it is: Feed the document to an LLM and ask it to identify natural semantic boundaries directly — using its language understanding rather than embedding similarity.
+Pros:
+
+LLMSemanticChunker achieves the highest recall of 0.919, suggesting LLMs are relatively capable at this task Trychroma
+Best at preserving complex, multi-hop reasoning and interweaved topics
+
+Cons:
+
+Relies on the performance of the underlying LLM, is potentially expensive in terms of compute and API calls, and is harder to standardize or replicate consistently Databricks
+High latency; not practical for large document corpora on a tight budget
+
+Verdict: Highest raw recall, but the cost/complexity is hard to justify unless your documents are complex and your budget allows it.
+
+Decision: I just went with token chunking for simplicity. 
